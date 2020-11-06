@@ -1,0 +1,188 @@
+
+<html>
+<head>
+  <meta>
+</head>
+<body>
+<button onclick=gen()>generate</button>
+<html>
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/@magenta/music@1.2.0"></script>
+    <script src="https://unpkg.com/tone@13.8.25/build/Tone.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tonaljs/tonal/browser/tonal.min.js"></script>
+
+  </head>
+
+  <body>
+
+
+
+  <script>
+
+
+Tone.Transport.bpm.value = 60;
+  let melodyRnn = new mm.MusicRNN( 'https://storage.googleapis.com/magentadata/js/checkpoints/music_rnn/chord_pitches_improv');
+ let melodyRnnLoaded = melodyRnn.initialize()
+
+  let arrayofpitches = [];
+  var frameinterval=setInterval(gen, 1000);
+
+
+async function gen(){
+     await melodyRnnLoaded;
+
+   let seed = {
+     notes: [
+       {pitch: Tone.Frequency('C5').toMidi(), quantizedStartStep: 0, quantizedEndStep: 4}
+     ],
+     totalQuantizedSteps: 4,
+     quantizationInfo: { stepsPerQuarter: 4}
+   };
+   let steps = 10;
+   let temperature = 1.2;
+
+
+///SETUP FOR PLAYING RANDOM CHORD
+
+Tone.Transport.stop()
+Tone.Transport.cancel()
+
+
+let chords = ['Am','C','Dm','Em','F','G'];
+var randomChord = chords[Math.floor(Math.random()*chords.length)];
+let chordProgression = [randomChord];
+console.log('Chord: ', chordProgression);
+let result = await melodyRnn.continueSequence(seed, steps, temperature, chordProgression);
+
+//GET NOTES
+for (let note of result.notes) {
+        column = note.quantizedStartStep;
+        let noteName = Tone.Frequency(note.pitch, 'midi').toNote();
+        arrayofpitches.push(noteName);
+    }
+
+
+///FILTER OUT ACCIDENTALS
+var seqtuned = arrayofpitches;
+    var toRemove = ["G#4","G#5","A#4","A#5","B#4","B#5","C#4","C#5","D#4","D#5","F#4","F#5"];
+
+    var seqtuned = seqtuned.filter((item) => !toRemove.includes(item));
+    console.log('Melody: ', seqtuned)
+
+
+
+///PLAYSTUFF
+
+
+if (randomChord == 'Am') {  AmChord()};
+if (randomChord == 'C') {  CChord()};
+if (randomChord == 'Dm') {  DmChord()};
+if (randomChord == 'Em') {  EmChord()};
+if (randomChord == 'F') {  FChord()};
+if (randomChord == 'G') {  GChord()};
+
+
+
+
+    ///Tone.Frequency(arrayofpitches).transpose(4);
+
+
+
+///LEAD SYNTH
+    const synth = new Tone.Synth().chain( Tone.Master);
+    const seq = new Tone.Sequence((time, note) => {
+      //seq.dispose();
+      synth.triggerAttackRelease(note, 0.2, time);
+      // subdivisions are given as subarrays
+    },
+
+ [seqtuned],"4n").start(0);
+seq.loop = 2;
+
+
+Tone.Transport.start();
+arrayofpitches = [];
+
+ }
+
+
+
+
+
+
+   ///POLY SYNTH + EFFECTS
+
+   ///const distortion = new Tone.Distortion(0.4).toMaster();
+   var verb= new Tone.Reverb ( 1.5 );
+   var freeverb = new Tone.Freeverb(0.2,3000);
+   var polyfilter = new Tone.Filter(500, "lowpass")
+   var vol1 = new Tone.Volume(-6);
+   var polyPong = new Tone.PingPongDelay("64n", 0.1)
+   polyPong.wet.value = 0.5;
+
+   var polySynth = new Tone.PolySynth(6, Tone.Synth, {
+     oscillator : {
+       type : "sawtooth"
+     }
+   }).chain(vol1, polyfilter, Tone.Master);
+
+
+
+
+   ///POLYSYNTH CHORDS
+
+   function DmChord(){
+                   polySynth.triggerAttackRelease(['D2','D3','F4', 'A4','C4'],"4n");
+               }
+
+   function GChord(){
+                       polySynth.triggerAttackRelease(['G1','G2','G3','B4', 'D4', 'G4'],"4n");
+                   }
+
+   function EmChord(){
+             polySynth.triggerAttackRelease(['E2', 'G4','E4','C4',],"4n");
+                                 }
+
+   function FChord(){
+       polySynth.triggerAttackRelease(['F1','F2','F3','A3', 'C4', 'A4'],"4n");
+                                                 }
+
+
+   function AmChord(){
+   polySynth.triggerAttackRelease(['A1','A2', 'C4', 'E4','A4'],"4n");
+     }
+
+   function CChord(){
+       //polySynth.triggerAttack(['C2','C3', 'E4', 'G4', 'B4'], "", 0.2);
+       polySynth.triggerAttackRelease(['C2','C3', 'E4', 'G4', 'C4'], "4n");
+         }
+
+
+
+
+
+
+
+  </script>
+
+
+
+
+
+
+
+
+
+  <script>
+
+
+
+</script>
+
+
+
+
+
+
+</body>
+</html>
